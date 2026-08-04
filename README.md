@@ -99,6 +99,21 @@ Open your browser and visit: **`http://localhost:5000`**
 
 The app is a standard Node.js + Express application and runs on any Node ≥ 18 platform (Render, Railway, Heroku, Fly.io, VPS, etc.).
 
+### 🚀 One-Click Deploy on Render (Blueprint)
+
+The repo ships with a [`render.yaml`](./render.yaml) blueprint, so you don't need to configure anything manually:
+
+1. Push this repo to GitHub (already done for `ezechieldalluwin/EZECHIE-123`).
+2. Go to **https://dashboard.render.com/new/blueprint** and connect that GitHub repository.
+3. Render detects `render.yaml` and asks you to fill in the **secret values** (admin password, JWT secret — the DB values are optional).
+4. Click **Apply** and wait for the build. Your app is live at `https://cinestream.onrender.com`.
+
+That's it — build command, start command, health check and free plan are all pre-configured.
+
+### Manual Deploy
+
+Still can deploy manually instead of using the blueprint — see below.
+
 ### Environment Variables (Production)
 
 Create a `.env` file (see `.env.example`) or set these in your platform's dashboard:

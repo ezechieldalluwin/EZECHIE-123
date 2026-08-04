@@ -1,0 +1,43 @@
+# Render Blueprint - one-click deploy configuration
+# Usage: https://dashboard.render.com/new/blueprint -> connect this GitHub repo
+# Render detects render.yaml and provisions the service automatically.
+
+services:
+  - type: web
+    name: cinestream
+    runtime: node
+    repo: https://github.com/ezechieldalluwin/EZECHIE-123.git
+    branch: main
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/health
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      # Admin login credentials (fill these in during Blueprint creation)
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Long random string used to sign admin session tokens
+      - key: JWT_SECRET
+        sync: false
+      # Optional: restrict API origins, e.g. https://cinestream.onrender.com
+      - key: CORS_ORIGIN
+        sync: false
+      # ---- Optional MySQL for persistent storage -----------------------------
+      # If left blank the app uses database/fallback_store.json (JSON mode).
+      # For data that survives redeploys, provision a MySQL instance (e.g. Aiven
+      # free tier) and set these values:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false

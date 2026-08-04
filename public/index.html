@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineStream - Movie Advertising, Streaming & Download Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="bg-glow glow-one"></div>
+    <div class="bg-glow glow-two"></div>
+
+    <header class="navbar">
+        <div class="nav-brand">
+            <span class="brand-icon"><i class="fa-solid fa-clapperboard"></i></span>
+            <span class="brand-name">Cine<span class="brand-accent">Stream</span></span>
+        </div>
+
+        <div class="nav-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="search-input" placeholder="Search movies by title or keyword..." autocomplete="off">
+        </div>
+
+        <div class="nav-actions">
+            <button class="btn btn-ghost" id="admin-btn" title="Admin Login">
+                <i class="fa-solid fa-user-shield"></i>
+                <span class="btn-text">Admin</span>
+            </button>
+            <button class="btn btn-outline" id="db-status-btn" title="Database Status">
+                <i class="fa-solid fa-database"></i>
+                <span class="btn-text" id="db-status-label">Checking...</span>
+            </button>
+        </div>
+    </header>
+
+    <section class="hero-section" id="hero-section">
+        <div class="hero-slide" id="hero-slide">
+            <div class="hero-backdrop" id="hero-backdrop"></div>
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-badge-row">
+                    <span class="hero-quality" id="hero-quality">4K Ultra</span>
+                    <span class="hero-genre" id="hero-genre">Sci-Fi</span>
+                </div>
+                <h1 class="hero-title" id="hero-title">Loading...</h1>
+                <div class="hero-meta">
+                    <span class="hero-rating"><i class="fa-solid fa-star"></i> <span id="hero-rating">0.0</span></span>
+                    <span class="hero-meta-sep">|</span>
+                    <span id="hero-year">2025</span>
+                    <span class="hero-meta-sep">|</span>
+                    <span id="hero-duration">0h 00m</span>
+                    <span class="hero-meta-sep">|</span>
+                    <span><i class="fa-solid fa-eye"></i> <span id="hero-views">0</span></span>
+                </div>
+                <p class="hero-desc" id="hero-desc"></p>
+                <div class="hero-actions">
+                    <button class="btn btn-primary" id="hero-watch-btn"><i class="fa-solid fa-play"></i> Watch Now</button>
+                    <button class="btn btn-outline" id="hero-download-btn"><i class="fa-solid fa-download"></i> Download</button>
+                </div>
+            </div>
+        </div>
+        <div class="hero-dots" id="hero-dots"></div>
+        <button class="hero-arrow hero-arrow-left" id="hero-prev"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="hero-arrow hero-arrow-right" id="hero-next"><i class="fa-solid fa-chevron-right"></i></button>
+    </section>
+
+    <main class="catalog-section">
+        <div class="catalog-header">
+            <h2 class="section-title"><i class="fa-solid fa-film"></i> Movie Showcase</h2>
+            <div class="genre-pills" id="genre-pills"></div>
+        </div>
+
+        <div class="catalog-toolbar">
+            <p class="result-count" id="result-count">Loading movies...</p>
+            <div class="sort-control">
+                <label for="sort-select"><i class="fa-solid fa-arrow-down-wide-short"></i> Sort:</label>
+                <select id="sort-select">
+                    <option value="latest">Latest</option>
+                    <option value="rating">Top Rated</option>
+                    <option value="year">Newest Year</option>
+                    <option value="views">Most Viewed</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="movies-grid" id="movies-grid">
+            <div class="loader-ring"></div>
+        </div>
+
+        <p class="empty-state" id="empty-state" hidden>No movies found matching your search. Try a different keyword or genre.</p>
+    </main>
+
+    <footer class="site-footer">
+        <p><i class="fa-solid fa-clapperboard"></i> CineStream &copy; <span id="footer-year"></span> - Movie Advertising, Streaming & Download Platform</p>
+        <p>Developed by EZECHIEL UWISHAKIYE</p>
+    </footer>
+
+    <div class="modal-overlay" id="player-modal" hidden>
+        <div class="player-modal-box">
+            <button class="modal-close" id="player-close"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="player-title" id="player-title"></h3>
+            <video class="video-player" id="video-player" controls autoplay></video>
+            <div class="player-actions">
+                <button class="btn btn-outline" id="player-download-btn"><i class="fa-solid fa-download"></i> Download</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="admin-login-modal" hidden>
+        <div class="modal-box auth-box">
+            <button class="modal-close" id="admin-login-close"><i class="fa-solid fa-xmark"></i></button>
+            <div class="auth-icon"><i class="fa-solid fa-user-shield"></i></div>
+            <h3 class="modal-title">Admin Login</h3>
+            <p class="modal-subtitle">Sign in to manage the movie catalog</p>
+            <form id="login-form">
+                <div class="form-field">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" placeholder="Enter admin username" required>
+                </div>
+                <div class="form-field">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter admin password" required>
+                </div>
+                <p class="form-error" id="login-error" hidden></p>
+                <button type="submit" class="btn btn-primary btn-block" id="login-submit-btn">
+                    <i class="fa-solid fa-right-to-bracket"></i> Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="admin-modal" hidden>
+        <div class="modal-box admin-box">
+            <button class="modal-close" id="admin-close"><i class="fa-solid fa-xmark"></i></button>
+            <div class="admin-header">
+                <h3 class="modal-title"><i class="fa-solid fa-gauge-high"></i> Admin Dashboard</h3>
+                <button class="btn btn-ghost" id="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fa-solid fa-film stat-icon"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-total">0</span>
+                        <span class="stat-label">Total Movies</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-eye stat-icon"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-views">0</span>
+                        <span class="stat-label">Total Views</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-download stat-icon"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-downloads">0</span>
+                        <span class="stat-label">Total Downloads</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-database stat-icon"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-db">-</span>
+                        <span class="stat-label">Database Mode</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary add-movie-btn" id="add-movie-btn"><i class="fa-solid fa-plus"></i> Publish New Movie</button>
+
+            <div class="admin-form-wrap" id="movie-form-wrap" hidden>
+                <h4 class="form-heading" id="movie-form-title"><i class="fa-solid fa-plus"></i> Publish New Movie</h4>
+                <form id="movie-form" enctype="multipart/form-data">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="mv-title">Title *</label>
+                            <input type="text" id="mv-title" placeholder="Movie title" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="mv-genre">Genre *</label>
+                            <input type="text" id="mv-genre" placeholder="e.g. Action, Sci-Fi" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="mv-rating">IMDb Rating</label>
+                            <input type="number" id="mv-rating" step="0.1" min="0" max="10" placeholder="8.5">
+                        </div>
+                        <div class="form-field">
+                            <label for="mv-year">Release Year</label>
+                            <input type="number" id="mv-year" min="1900" max="2100" placeholder="2025">
+                        </div>
+                        <div class="form-field">
+                            <label for="mv-duration">Duration</label>
+                            <input type="text" id="mv-duration" placeholder="2h 05m">
+                        </div>
+                        <div class="form-field">
+                            <label for="mv-quality">Quality</label>
+                            <select id="mv-quality">
+                                <option value="4K Ultra">4K Ultra</option>
+                                <option value="1080p HD">1080p HD</option>
+                                <option value="720p HD">720p HD</option>
+                                <option value="HD">HD</option>
+                                <option value="CAM">CAM</option>
+                            </select>
+                        </div>
+                        <div class="form-field form-field-full">
+                            <label for="mv-poster-url">Poster URL</label>
+                            <input type="text" id="mv-poster-url" placeholder="https://... poster image link">
+                        </div>
+                        <div class="form-field">
+                            <label for="mv-poster-file">Or Upload Poster Image</label>
+                            <input type="file" id="mv-poster-file" accept="image/*">
+                        </div>
+                        <div class="form-field form-field-full">
+                            <label for="mv-video-url">Video Stream URL</label>
+                            <input type="text" id="mv-video-url" placeholder="https://... .mp4 or uploaded file">
+                        </div>
+                        <div class="form-field">
+                            <label for="mv-video-file">Or Upload Video File</label>
+                            <input type="file" id="mv-video-file" accept="video/*">
+                        </div>
+                        <div class="form-field form-field-full">
+                            <label for="mv-description">Synopsis</label>
+                            <textarea id="mv-description" rows="3" placeholder="Short plot synopsis..."></textarea>
+                        </div>
+                        <div class="form-field form-field-full">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="mv-featured">
+                                Feature this movie in the Hero Spotlight
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" id="form-cancel-btn">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="form-submit-btn"><i class="fa-solid fa-check"></i> Save Movie</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="admin-table-wrap">
+                <h4 class="form-heading"><i class="fa-solid fa-list"></i> Manage Movies</h4>
+                <div class="table-scroll">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Poster</th>
+                                <th>Title</th>
+                                <th>Genre</th>
+                                <th>Rating</th>
+                                <th>Year</th>
+                                <th>Quality</th>
+                                <th>Views</th>
+                                <th>Downloads</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

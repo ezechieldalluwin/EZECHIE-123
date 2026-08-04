@@ -95,6 +95,56 @@ Open your browser and visit: **`http://localhost:5000`**
 
 ---
 
+## ☁️ Deployment Guide
+
+The app is a standard Node.js + Express application and runs on any Node ≥ 18 platform (Render, Railway, Heroku, Fly.io, VPS, etc.).
+
+### Environment Variables (Production)
+
+Create a `.env` file (see `.env.example`) or set these in your platform's dashboard:
+
+| Variable | Description |
+| :--- | :--- |
+| `PORT` | Port the server listens on (most platforms inject this automatically) |
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` | MySQL connection (optional — if offline, JSON fallback storage is used) |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Admin login credentials |
+| `JWT_SECRET` | Long random string used to sign admin session tokens |
+| `CORS_ORIGIN` | Optional — restrict API origins to your domain, e.g. `https://yourdomain.com` |
+
+### Node.js Platforms (Render / Railway / Heroku)
+
+1. Push the project to a Git repository.
+2. Create a new **Web Service**, set the **Start Command** to `npm start`, and the build command to `npm install`.
+3. Set the environment variables listed above.
+4. Deploy. The app serves the frontend and API from the same server, so no extra static hosting is needed.
+
+### VPS / Docker
+
+```bash
+git clone <your-repo> && cd <your-repo>
+npm ci --omit=dev
+cp .env.example .env   # then edit values
+npm start
+```
+
+Expose it with a reverse proxy (Caddy/Nginx) and HTTPS. For a single-port setup, no reverse proxy is strictly required.
+
+### MySQL vs JSON Fallback
+
+- If a reachable MySQL database is configured, the server auto-creates the `movies` table and seeds demo data.
+- If MySQL is offline/unset, the app transparently uses `database/fallback_store.json` so it works out of the box.
+- The DB mode is shown on the navbar and reported by `GET /api/health`.
+
+### Production Security Checklist
+
+- [ ] Set strong `ADMIN_PASSWORD` and a random `JWT_SECRET`
+- [ ] Set `CORS_ORIGIN` to your domain
+- [ ] Do **not** commit `.env` (already in `.gitignore`)
+- [ ] Run `npm audit` and keep dependencies updated
+- [ ] If exposing uploads publicly, ensure the `public/uploads/` folder is writable
+
+---
+
 ## 🔑 Admin Credentials
 
 - **Username**: `admin`

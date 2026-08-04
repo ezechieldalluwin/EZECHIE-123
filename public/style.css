@@ -153,6 +153,26 @@ body {
     color: var(--text-dim);
 }
 
+.search-clear {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.search-clear:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
 .nav-actions {
     display: flex;
     align-items: center;
@@ -302,6 +322,21 @@ body {
     line-height: 1.05;
     text-shadow: 0 6px 30px rgba(0, 0, 0, 0.7);
     margin-bottom: 12px;
+}
+
+.hero-title.title-anim {
+    animation: title-in 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes title-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .hero-meta {
@@ -466,6 +501,20 @@ body {
     box-shadow: 0 6px 16px var(--accent-glow);
 }
 
+.pill-count {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.genre-pill.active .pill-count {
+    background: rgba(255, 255, 255, 0.25);
+}
+
 .catalog-toolbar {
     display: flex;
     align-items: center;
@@ -514,6 +563,63 @@ body {
     border: 1px solid var(--border);
     cursor: pointer;
     transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+}
+
+.movie-card.animate-in {
+    animation: card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes card-in {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.movie-card.skeleton {
+    cursor: default;
+    pointer-events: none;
+    border-color: transparent;
+}
+
+.skeleton-block {
+    width: 100%;
+    height: 100%;
+    min-height: 320px;
+    background: linear-gradient(100deg, var(--card) 40%, var(--card-hover) 50%, var(--card) 60%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s ease-in-out infinite;
+}
+
+.skeleton-text {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 14px;
+}
+
+.skeleton-text .skeleton-block {
+    height: 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.skeleton-text .skeleton-block.short {
+    width: 55%;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .movie-card:hover {
@@ -643,8 +749,18 @@ body {
 .empty-state {
     text-align: center;
     color: var(--text-dim);
-    padding: 60px 20px;
+    padding: 70px 20px;
     font-size: 16px;
+}
+
+.empty-state i {
+    font-size: 46px;
+    margin-bottom: 16px;
+    color: var(--border);
+}
+
+.empty-state p {
+    margin-bottom: 20px;
 }
 
 .loader-ring {
@@ -878,6 +994,11 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
+.video-frame {
+    position: relative;
+    background: #000;
+}
+
 .video-player {
     width: 100%;
     display: block;
@@ -885,10 +1006,81 @@ body {
     aspect-ratio: 16 / 9;
 }
 
+.player-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #000;
+    z-index: 2;
+}
+
+.player-loading .loader-ring {
+    margin: 0;
+}
+
+.player-loading[hidden] {
+    display: none;
+}
+
+.player-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: rgba(6, 6, 12, 0.92);
+    color: var(--text-dim);
+    text-align: center;
+    padding: 20px;
+    z-index: 3;
+}
+
+.player-error i {
+    font-size: 40px;
+    color: var(--accent);
+}
+
+.player-error[hidden] {
+    display: none;
+}
+
 .player-actions {
     padding: 14px 22px;
     background: var(--bg-soft);
     border-top: 1px solid var(--border);
+}
+
+/* ---------- Confirm Modal ---------- */
+.confirm-box {
+    max-width: 400px;
+    text-align: center;
+}
+
+.confirm-icon {
+    width: 62px;
+    height: 62px;
+    margin: 0 auto 16px;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    background: rgba(229, 9, 20, 0.12);
+    color: var(--accent);
+    font-size: 26px;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.confirm-actions .btn {
+    min-width: 110px;
+    justify-content: center;
 }
 
 /* ---------- Admin Dashboard ---------- */
@@ -1088,6 +1280,65 @@ body {
     color: var(--accent);
 }
 
+.icon-btn.feature {
+    color: var(--text-dim);
+}
+
+.icon-btn.feature.active {
+    color: var(--gold);
+    border-color: rgba(245, 179, 1, 0.45);
+    background: rgba(245, 179, 1, 0.12);
+}
+
+.icon-btn.feature:hover {
+    color: var(--gold);
+    border-color: rgba(245, 179, 1, 0.6);
+    background: rgba(245, 179, 1, 0.15);
+}
+
+.stat-card:nth-child(2) .stat-icon {
+    background: rgba(245, 179, 1, 0.12);
+    color: var(--gold);
+}
+
+.stat-card:nth-child(3) .stat-icon {
+    background: rgba(59, 130, 246, 0.12);
+    color: #7ab0ff;
+}
+
+.stat-card:nth-child(4) .stat-icon {
+    background: rgba(34, 197, 94, 0.12);
+    color: #22c55e;
+}
+
+/* ---------- Scroll to top ---------- */
+.scroll-top {
+    position: fixed;
+    bottom: 26px;
+    right: 26px;
+    z-index: 150;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.25s;
+}
+
+.scroll-top[hidden] {
+    display: none;
+}
+
+.scroll-top:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: translateY(-3px);
+}
+
 /* ---------- Toast ---------- */
 .toast {
     position: fixed;
@@ -1183,5 +1434,12 @@ body {
 
     .admin-box {
         padding: 22px 16px;
+    }
+
+    .scroll-top {
+        bottom: 18px;
+        right: 18px;
+        width: 42px;
+        height: 42px;
     }
 }

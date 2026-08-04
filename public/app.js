@@ -8,7 +8,9 @@ const state = {
     heroIndex: 0,
     heroTimer: null,
     token: localStorage.getItem('cinestream_admin_token') || null,
-    editingId: null
+    editingId: null,
+    pendingDeleteId: null,
+    playerMovie: null
 };
 
 const els = {};
@@ -22,11 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function cacheElements() {
     els.searchInput = document.getElementById('search-input');
+    els.searchClear = document.getElementById('search-clear');
     els.genrePills = document.getElementById('genre-pills');
     els.moviesGrid = document.getElementById('movies-grid');
     els.resultCount = document.getElementById('result-count');
     els.emptyState = document.getElementById('empty-state');
     els.sortSelect = document.getElementById('sort-select');
+    els.scrollTop = document.getElementById('scroll-top');
     els.heroBackdrop = document.getElementById('hero-backdrop');
     els.heroTitle = document.getElementById('hero-title');
     els.heroDesc = document.getElementById('hero-desc');
@@ -40,6 +44,8 @@ function cacheElements() {
     els.playerModal = document.getElementById('player-modal');
     els.playerTitle = document.getElementById('player-title');
     els.videoPlayer = document.getElementById('video-player');
+    els.playerLoading = document.getElementById('player-loading');
+    els.playerError = document.getElementById('player-error');
     els.adminLoginModal = document.getElementById('admin-login-modal');
     els.adminModal = document.getElementById('admin-modal');
     els.loginForm = document.getElementById('login-form');
@@ -48,8 +54,11 @@ function cacheElements() {
     els.movieFormWrap = document.getElementById('movie-form-wrap');
     els.movieForm = document.getElementById('movie-form');
     els.movieFormTitle = document.getElementById('movie-form-title');
+    els.confirmModal = document.getElementById('confirm-modal');
+    els.confirmMessage = document.getElementById('confirm-message');
     els.dbStatusLabel = document.getElementById('db-status-label');
     els.statTotal = document.getElementById('stat-total');
+    els.statFeatured = document.getElementById('stat-featured');
     els.statViews = document.getElementById('stat-views');
     els.statDownloads = document.getElementById('stat-downloads');
     els.statDb = document.getElementById('stat-db');
@@ -59,12 +68,38 @@ function cacheElements() {
 function bindEvents() {
     els.searchInput.addEventListener('input', debounce(() => {
         state.searchQuery = els.searchInput.value.trim();
+        els.searchClear.hidden = state.searchQuery.length === 0;
         loadMovies();
     }, 350));
+
+    els.searchClear.addEventListener('click', () => {
+        els.searchInput.value = '';
+        state.searchQuery = '';
+        els.searchClear.hidden = true;
+        loadMovies();
+    });
 
     els.sortSelect.addEventListener('change', () => {
         state.sortBy = els.sortSelect.value;
         loadMovies();
+    });
+
+    document.getElementById('clear-filters-btn').addEventListener('click', () => {
+        state.activeGenre = 'All';
+        state.searchQuery = '';
+        state.sortBy = 'latest';
+        els.searchInput.value = '';
+        els.searchClear.hidden = true;
+        els.sortSelect.value = 'latest';
+        loadMovies();
+    });
+
+    window.addEventListener('scroll', () => {
+        els.scrollTop.hidden = window.scrollY < 600;
+    }, { passive: true });
+
+    els.scrollTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     document.getElementById('hero-watch-btn').addEventListener('click', () => {
@@ -87,6 +122,11 @@ function bindEvents() {
     document.getElementById('player-download-btn').addEventListener('click', () => {
         if (state.playerMovie) triggerDownload(state.playerMovie);
     });
+    document.getElementById('player-error-close').addEventListener('click', closePlayer);
+    els.videoPlayer.addEventListener('canplay', hidePlayerLoading);
+    els.videoPlayer.addEventListener('playing', hidePlayerLoading);
+    els.videoPlayer.addEventListener('waiting', showPlayerLoading);
+    els.videoPlayer.addEventListener('error', showPlayerError);
 
     document.getElementById('admin-btn').addEventListener('click', openAdmin);
     document.getElementById('admin-login-close').addEventListener('click', () => closeModal(els.adminLoginModal));
@@ -104,11 +144,19 @@ function bindEvents() {
     document.getElementById('form-cancel-btn').addEventListener('click', hideMovieForm);
     els.movieForm.addEventListener('submit', handleMovieSubmit);
 
+    document.getElementById('confirm-close').addEventListener('click', closeConfirmModal);
+    document.getElementById('confirm-cancel').addEventListener('click', closeConfirmModal);
+    els.confirmModal.addEventListener('click', (e) => {
+        if (e.target === els.confirmModal) closeConfirmModal();
+    });
+    document.getElementById('confirm-delete').addEventListener('click', confirmDelete);
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closePlayer();
             closeModal(els.adminLoginModal);
             closeModal(els.adminModal);
+            closeConfirmModal();
         }
     });
 }
@@ -124,14 +172,14 @@ async function loadMovies() {
     if (state.activeGenre && state.activeGenre !== 'All') params.set('genre', state.activeGenre);
     if (state.sortBy) params.set('sort', state.sortBy);
 
-    showLoading();
+    showSkeletons();
     try {
         const res = await fetch(`/api/movies?${params.toString()}`);
         const json = await res.json();
         if (!json.success) throw new Error(json.message || 'Failed to load movies');
 
         state.movies = json.data || [];
-        state.featured = state.movies.filter(m => m.is_featured) || [];
+        state.featured = state.movies.filter(m => m.is_featured);
         if (state.featured.length === 0) state.featured = state.movies.slice(0, 4);
 
         updateGenres();
@@ -145,19 +193,24 @@ async function loadMovies() {
     } catch (err) {
         console.error(err);
         els.moviesGrid.innerHTML = '';
+        els.emptyState.hidden = false;
         els.resultCount.textContent = 'Error loading movies';
         showToast(err.message, 'error');
     }
 }
 
 function updateGenres() {
-    const genres = new Set(state.movies.map(m => m.genre).filter(Boolean));
-    const all = ['All', ...genres];
+    const counts = {};
+    state.movies.forEach(m => {
+        if (m.genre) counts[m.genre] = (counts[m.genre] || 0) + 1;
+    });
+    const all = ['All', ...Object.keys(counts)];
     if (JSON.stringify(all) !== JSON.stringify(state.genres)) {
         state.genres = all;
-        els.genrePills.innerHTML = all.map(g =>
-            `<button class="genre-pill ${g === state.activeGenre ? 'active' : ''}" data-genre="${escapeAttr(g)}">${escapeHtml(g)}</button>`
+        const pillHtml = all.map(g =>
+            `<button class="genre-pill ${g === state.activeGenre ? 'active' : ''}" data-genre="${escapeAttr(g)}">${escapeHtml(g)}${g !== 'All' ? ` <span class="pill-count">${counts[g]}</span>` : ''}</button>`
         ).join('');
+        els.genrePills.innerHTML = pillHtml;
         els.genrePills.querySelectorAll('.genre-pill').forEach(btn => {
             btn.addEventListener('click', () => {
                 state.activeGenre = btn.dataset.genre;
@@ -172,7 +225,7 @@ function updateGenres() {
 function renderHero() {
     if (state.featured.length === 0) return;
     els.heroDots.innerHTML = state.featured.map((_, i) =>
-        `<button class="hero-dot ${i === state.heroIndex ? 'active' : ''}" data-index="${i}"></button>`
+        `<button class="hero-dot ${i === state.heroIndex ? 'active' : ''}" data-index="${i}" aria-label="Movie ${i + 1}"></button>`
     ).join('');
     els.heroDots.querySelectorAll('.hero-dot').forEach(dot => {
         dot.addEventListener('click', () => {
@@ -190,6 +243,9 @@ function showHero() {
     if (!m) return;
     els.heroBackdrop.style.backgroundImage = `url("${m.poster_url}")`;
     els.heroTitle.textContent = m.title;
+    els.heroTitle.classList.remove('title-anim');
+    void els.heroTitle.offsetWidth;
+    els.heroTitle.classList.add('title-anim');
     els.heroDesc.textContent = m.description || '';
     els.heroQuality.textContent = m.quality || 'HD';
     els.heroGenre.textContent = m.genre || 'Movie';
@@ -208,23 +264,41 @@ function shiftHero(dir) {
     state.heroTimer = setInterval(() => shiftHero(1), 7000);
 }
 
+function showSkeletons() {
+    els.moviesGrid.innerHTML = '';
+    els.emptyState.hidden = true;
+    const skeletonHtml = Array(8).fill(`
+        <div class="movie-card skeleton">
+            <div class="movie-poster-wrap">
+                <div class="skeleton-block"></div>
+                <div class="skeleton-text">
+                    <div class="skeleton-block"></div>
+                    <div class="skeleton-block short"></div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    els.moviesGrid.innerHTML = skeletonHtml;
+}
+
 function renderGrid() {
     els.moviesGrid.innerHTML = '';
     els.emptyState.hidden = state.movies.length > 0;
 
     if (state.movies.length === 0) return;
 
-    state.movies.forEach(m => {
+    state.movies.forEach((m, i) => {
         const card = document.createElement('div');
-        card.className = 'movie-card';
+        card.className = 'movie-card animate-in';
+        card.style.animationDelay = `${Math.min(i * 55, 500)}ms`;
         card.innerHTML = `
             <div class="movie-poster-wrap">
-                <img class="movie-poster" src="${escapeAttr(m.poster_url)}" alt="${escapeAttr(m.title)}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1000&auto=format&fit=crop'">
+                <img class="movie-poster" src="${escapeAttr(m.poster_url)}" alt="${escapeAttr(m.title)}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1000&auto=format&fit=crop'">
                 <span class="quality-badge">${escapeHtml(m.quality || 'HD')}</span>
                 ${m.is_featured ? '<span class="feat-badge"><i class="fa-solid fa-star"></i> Featured</span>' : ''}
                 <div class="movie-overlay">
-                    <button class="overlay-btn watch" data-action="watch" data-id="${m.id}" title="Watch"><i class="fa-solid fa-play"></i></button>
-                    <button class="overlay-btn download" data-action="download" data-id="${m.id}" title="Download"><i class="fa-solid fa-download"></i></button>
+                    <button class="overlay-btn watch" data-action="watch" data-id="${m.id}" title="Watch" aria-label="Watch ${escapeAttr(m.title)}"><i class="fa-solid fa-play"></i></button>
+                    <button class="overlay-btn download" data-action="download" data-id="${m.id}" title="Download" aria-label="Download ${escapeAttr(m.title)}"><i class="fa-solid fa-download"></i></button>
                 </div>
             </div>
             <div class="movie-info">
@@ -235,6 +309,8 @@ function renderGrid() {
                     <span>${m.release_year}</span>
                     <span class="sep">|</span>
                     <span>${escapeHtml(m.duration || '')}</span>
+                    <span class="sep">|</span>
+                    <span title="Views"><i class="fa-solid fa-eye"></i> ${Number(m.views_count || 0).toLocaleString()}</span>
                 </div>
             </div>
         `;
@@ -253,7 +329,12 @@ function renderGrid() {
 function openPlayer(movie) {
     state.playerMovie = movie;
     els.playerTitle.textContent = movie.title;
+    els.playerError.hidden = true;
+    els.videoPlayer.hidden = false;
+    showPlayerLoading();
     els.videoPlayer.src = `/api/movies/${movie.id}/stream`;
+    els.videoPlayer.load();
+    els.videoPlayer.play().catch(() => {});
     els.playerModal.hidden = false;
 }
 
@@ -262,16 +343,28 @@ function closePlayer() {
     els.videoPlayer.removeAttribute('src');
     els.videoPlayer.load();
     els.playerModal.hidden = true;
+    els.playerLoading.hidden = true;
+    els.playerError.hidden = true;
     state.playerMovie = null;
+}
+
+function showPlayerLoading() {
+    els.playerLoading.hidden = false;
+}
+
+function hidePlayerLoading() {
+    els.playerLoading.hidden = true;
+}
+
+function showPlayerError() {
+    hidePlayerLoading();
+    els.playerError.hidden = false;
+    els.videoPlayer.hidden = true;
 }
 
 function triggerDownload(movie) {
     window.location.href = `/api/movies/${movie.id}/download`;
     showToast(`Download started: ${movie.title}`, 'success');
-}
-
-function showLoading() {
-    els.moviesGrid.innerHTML = '<div class="loader-ring"></div>';
 }
 
 function openAdmin() {
@@ -342,9 +435,11 @@ function openAdminDashboard() {
 
 function renderAdminStats() {
     const total = state.movies.length;
+    const featured = state.movies.filter(m => m.is_featured).length;
     const views = state.movies.reduce((s, m) => s + Number(m.views_count || 0), 0);
     const downloads = state.movies.reduce((s, m) => s + Number(m.download_count || 0), 0);
     els.statTotal.textContent = total;
+    els.statFeatured.textContent = featured;
     els.statViews.textContent = views.toLocaleString();
     els.statDownloads.textContent = downloads.toLocaleString();
     els.statDb.textContent = els.dbStatusLabel.textContent;
@@ -362,6 +457,9 @@ function renderAdminTable() {
             <td>${Number(m.views_count || 0).toLocaleString()}</td>
             <td>${Number(m.download_count || 0).toLocaleString()}</td>
             <td>
+                <button class="icon-btn feature ${m.is_featured ? 'active' : ''}" data-feature="${m.id}" title="${m.is_featured ? 'Remove from featured' : 'Feature in spotlight'}"><i class="fa-solid fa-star"></i></button>
+            </td>
+            <td>
                 <div class="table-actions">
                     <button class="icon-btn edit" data-edit="${m.id}" title="Edit"><i class="fa-solid fa-pen"></i></button>
                     <button class="icon-btn delete" data-delete="${m.id}" title="Delete"><i class="fa-solid fa-trash"></i></button>
@@ -378,11 +476,31 @@ function renderAdminTable() {
     });
 
     els.adminTableBody.querySelectorAll('[data-delete]').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', () => {
             const m = state.movies.find(x => x.id === Number(btn.dataset.delete));
             if (!m) return;
-            if (!confirm(`Delete "${m.title}" permanently?`)) return;
-            await deleteMovie(m.id);
+            state.pendingDeleteId = m.id;
+            els.confirmMessage.textContent = `Are you sure you want to delete "${m.title}" permanently? This action cannot be undone.`;
+            els.confirmModal.hidden = false;
+        });
+    });
+
+    els.adminTableBody.querySelectorAll('[data-feature]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const m = state.movies.find(x => x.id === Number(btn.dataset.feature));
+            if (!m) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            try {
+                await updateMovie(m.id, { ...m, is_featured: m.is_featured ? 0 : 1 });
+                showToast(m.is_featured ? 'Removed from spotlight' : 'Now featured in spotlight', 'success');
+                await loadMovies();
+                renderAdminStats();
+                renderAdminTable();
+            } catch (err) {
+                showToast(err.message, 'error');
+                renderAdminTable();
+            }
         });
     });
 }
@@ -489,7 +607,31 @@ async function handleMovieSubmit(e) {
     }
 }
 
-async function deleteMovie(id) {
+async function updateMovie(id, data) {
+    const res = await fetch(`/api/movies/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify(data)
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message || 'Update failed');
+    return json;
+}
+
+function closeConfirmModal() {
+    state.pendingDeleteId = null;
+    els.confirmModal.hidden = true;
+}
+
+async function confirmDelete() {
+    const id = state.pendingDeleteId;
+    if (!id) return;
+    const btn = document.getElementById('confirm-delete');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
     try {
         const res = await fetch(`/api/movies/${id}`, {
             method: 'DELETE',
@@ -499,12 +641,17 @@ async function deleteMovie(id) {
         if (!json.success) throw new Error(json.message || 'Failed to delete movie');
 
         showToast(json.message || 'Movie deleted successfully', 'success');
+        closeConfirmModal();
         await loadMovies();
         renderAdminStats();
         renderAdminTable();
     } catch (err) {
         console.error(err);
+        closeConfirmModal();
         showToast(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-trash"></i> Delete';
     }
 }
 
